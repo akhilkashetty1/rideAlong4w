@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Palette — lifted from the client's 4W posters ----
+     Night ground with poster lime, brake-light red (the guidelines frame and
+     thank-you banner), headlight magenta and the AZ orange. */
+  --color-night: #0a0c0f;
+  --color-night-2: #13161c;
+  --color-night-line: #262a33;
+  --color-neon: #dfe22b;        /* poster band lime */
+  --color-neon-deep: #a9ac0e;
+  --color-brake: #c1272d;       /* guidelines frame / thank-you banner */
+  --color-brake-deep: #9b1c21;
+  --color-brake-wash: #fdeced;
+  --color-glow: #ff2fb3;        /* headlight magenta — glows only */
+  --color-teal: #27c9bd;
+  --color-az: #f8a51c;          /* AZ orange — secondary buttons, like the 2W orange */
+  --color-ink: #15171b;
+  --color-ink-soft: #4a4f58;
+  --color-muted: #6b7280;
+  --color-paper: #ffffff;
+  --color-paper-2: #f6f7f9;
+  --color-line: #d9dce2;
+  --color-ok: #15803d;
+  --color-ok-wash: #e8f5ec;
+
+  /* ---- Type ---- */
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-poster: var(--font-dirt), Impact, system-ui, sans-serif;
+  --font-display: var(--font-russo), Impact, system-ui, sans-serif;
+
+  --shadow-card: 0 30px 80px -30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: var(--color-night);
+    /* Faint neon floor grid, echoing the cover art. */
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(223, 226, 43, 0.12), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(193, 39, 45, 0.18), transparent 70%),
+      linear-gradient(rgba(223, 226, 43, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(223, 226, 43, 0.045) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+    background-attachment: fixed;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--color-neon); color: var(--color-night); }
+}
+
+/* The 2W form's frame — black outer, red inner — kept for the 4W cards. */
+@utility frame {
+  border: 5px solid var(--color-night);
+  box-shadow: inset 0 0 0 5px var(--color-brake), var(--shadow-card);
+  border-radius: 14px;
+  background: var(--color-paper);
+}
+
+@utility neon-text {
+  text-shadow: 0 0 18px rgba(223, 226, 43, 0.55);
+}
+
+/* 2W landing pulse, a touch slower. */
+@keyframes posterPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 40px -8px rgba(255, 47, 179, 0.55), 0 0 90px -20px rgba(223, 226, 43, 0.5); }
+  50% { box-shadow: 0 0 60px -6px rgba(255, 47, 179, 0.8), 0 0 120px -18px rgba(223, 226, 43, 0.7); }
+}
+@keyframes lampBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes driveIn {
+  from { transform: translateX(-30px) scale(0.97); opacity: 0; filter: blur(8px); }
+  to { transform: none; opacity: 1; filter: none; }
+}
+@keyframes stepIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+/* Driver route centre line, rolling toward the viewer */
+.road-dash {
+  background: repeating-linear-gradient(to bottom, var(--color-neon) 0 14px, transparent 14px 28px);
+  animation: roadRoll 1.2s linear infinite;
+}
+@keyframes roadRoll { to { background-position: 0 28px; } }
+.poster-pulse { animation: posterPulse 8s ease-in-out infinite, glowPulse 4s ease-in-out infinite; }
+.lamp-blink { animation: lampBlink 1.4s ease-in-out infinite; }
+.drive-in { animation: driveIn 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.step-in { animation: stepIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .poster-pulse, .lamp-blink, .drive-in, .step-in, .road-dash { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+  .frame { border-color: #000; box-shadow: none; }
+  .print-avoid-break { break-inside: avoid; }
+}
