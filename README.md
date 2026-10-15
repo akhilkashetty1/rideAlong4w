@@ -58,9 +58,12 @@ Copy `.env.example` to `.env.local`. Set the same variables in Vercel for produc
 | `ADMIN_EMAIL_PRIMARY` | for email | Inbox that receives each submission |
 | `ADMIN_EMAIL_CC` | no | Optional CC |
 | `GOOGLE_SHEET_WEBAPP_URL` | for Sheet log | Apps Script Web App URL |
+| `HUB_INGEST_URL` | for the hub | `https://<hub-domain>/api/ingest/4w` |
+| `HUB_INGEST_KEY` | for the hub | The hub's `INGEST_KEY_4W` |
 
-At least one channel, email or Sheet, must be configured. A submission
-succeeds if any configured channel accepts it.
+At least one channel (email, Sheet or hub) must be configured. A submission
+succeeds if any configured channel accepts it. The hub is the database and admin
+login shared with the 2W form and RoadShield; the Sheet stays as a backup.
 
 **Sheet setup:** create a Google Sheet, open Extensions → Apps Script, paste
 `scripts/google-sheets-submission-log.gs`, and deploy it as a Web App

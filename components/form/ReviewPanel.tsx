@@ -16,7 +16,7 @@ export default function ReviewPanel({ report }: { report: ReportSection[] }) {
       >
         <p className="flex items-center gap-2 font-semibold">
           {flagged.length ? <TriangleAlert className="h-5 w-5 text-az" /> : <CircleCheck className="h-5 w-5 text-ok" />}
-          {flagged.length ? `${flagged.length} item${flagged.length === 1 ? "" : "s"} need follow-up` : "All checks clear — nothing flagged"}
+          {flagged.length ? `${flagged.length} item${flagged.length === 1 ? " needs" : "s need"} follow-up` : "All checks clear — nothing flagged"}
         </p>
         {flagged.length > 0 && (
           <ul className="mt-2 space-y-1 pl-7 text-sm text-ink-soft">

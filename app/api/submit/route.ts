@@ -56,12 +56,15 @@ export async function POST(request: Request) {
     const adminEmail = process.env.ADMIN_EMAIL_PRIMARY;
     const adminCc = process.env.ADMIN_EMAIL_CC;
     const googleSheetUrl = process.env.GOOGLE_SHEET_WEBAPP_URL;
+    const hubUrl = process.env.HUB_INGEST_URL;
+    const hubKey = process.env.HUB_INGEST_KEY;
 
     const emailConfigured = !!(apiKey && senderEmail && adminEmail);
+    const hubConfigured = !!(hubUrl && hubKey);
 
-    if (!emailConfigured && !googleSheetUrl) {
+    if (!emailConfigured && !googleSheetUrl && !hubConfigured) {
       console.error(
-        "Submit API misconfigured — neither Brevo (BREVO_API_KEY / BREVO_SENDER_EMAIL / ADMIN_EMAIL_PRIMARY) nor GOOGLE_SHEET_WEBAPP_URL is set",
+        "Submit API misconfigured — none of Brevo (BREVO_API_KEY / BREVO_SENDER_EMAIL / ADMIN_EMAIL_PRIMARY), GOOGLE_SHEET_WEBAPP_URL or the hub (HUB_INGEST_URL / HUB_INGEST_KEY) is set",
       );
       return NextResponse.json({ error: "Submissions are not configured yet" }, { status: 500 });
     }
@@ -75,7 +78,8 @@ export async function POST(request: Request) {
     const flagged = countFlagged(report);
     const { name, hq } = state.fields;
 
-    const operations: { kind: "email" | "sheet"; promise: Promise<boolean> }[] = [];
+    type Channel = "email" | "sheet" | "hub";
+    const operations: { kind: Channel; promise: Promise<boolean> }[] = [];
 
     if (emailConfigured) {
       operations.push({
@@ -116,21 +120,41 @@ export async function POST(request: Request) {
       });
     }
 
+    if (hubConfigured) {
+      operations.push({
+        kind: "hub",
+        // The submissions hub (database + admin). Same row as the Sheet, plus which answers were flagged.
+        promise: fetch(hubUrl!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-hub-key": hubKey! },
+          body: JSON.stringify({
+            ...toSheetRow(report),
+            submittedAt: assessedAt.toISOString(),
+            flagged: report.flatMap((s) => s.rows.filter((r) => r.flagged).map((r) => r.column)),
+          }),
+        }).then(async (res) => {
+          if (!res.ok) console.error("Hub response not ok:", res.status, await res.text().catch(() => ""));
+          return res.ok;
+        }),
+      });
+    }
+
     const results = await Promise.allSettled(operations.map((o) => o.promise));
-    const succeeded = (kind: "email" | "sheet") => {
+    const succeeded = (kind: Channel) => {
       const r = results[operations.findIndex((o) => o.kind === kind)];
       if (r?.status === "rejected") console.error(`Submit API: ${kind} failed`, r.reason);
       return r?.status === "fulfilled" && r.value;
     };
     const emailSuccess = emailConfigured && succeeded("email");
     const sheetSuccess = !!googleSheetUrl && succeeded("sheet");
+    const hubSuccess = hubConfigured && succeeded("hub");
 
-    if (!emailSuccess && !sheetSuccess) {
+    if (!emailSuccess && !sheetSuccess && !hubSuccess) {
       console.error("Submit API: every configured delivery channel failed");
       return NextResponse.json({ error: "Failed to submit the form. Please try again shortly." }, { status: 502 });
     }
 
-    return NextResponse.json({ success: true, details: { email: emailSuccess, sheet: sheetSuccess } });
+    return NextResponse.json({ success: true, details: { email: emailSuccess, sheet: sheetSuccess, hub: hubSuccess } });
   } catch (error) {
     console.error("Submit API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
