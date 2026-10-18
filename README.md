@@ -19,7 +19,7 @@ The content and flow match 2W. The 4W version presents them as a real car would:
 | Vehicle Assessment | **3D walkaround**: a procedurally built SUV on a turntable. Each question is a pin on its part. The car turns to the active question and that part reacts: indicators blink, headlights flash, wipers sweep, the horn sends out a sound ring, brake lights pulse. Drag to spin; tap a pin to jump to its question. |
 | Driver Assessment | **The drive**: questions sit along a road and a top-view car drives to the active one. Clear answers leave green cat's-eyes; flagged behaviour leaves a hazard triangle. |
 | Header | Instrument cluster: a speedometer for progress, a 3D steering wheel that turns as you go and shakes on a flagged answer, and **dashboard warning lights** that come on for each flagged check. |
-| Review | **Trip report**: checks clear out of total, the walkaround car with every part coloured, and the full warning-lamp panel. |
+| Review | A plain summary of every answer, section by section (dates and remarks included), then Print, Download as PDF and Submit. Kept deliberately simple at the client's request. |
 | Offline | No signal at Submit? The assessment is saved on the device (`lib/outbox.ts`) and sent automatically when the connection returns. The Sheet keeps the original assessment time and the time it was received. |
 | Install | Web app manifest, so it can be added to the home screen. Flagged answers buzz on phones that support vibration. |
 
@@ -79,7 +79,7 @@ app/
   assessment/               the form wizard
   api/submit/               validates, then emails (Brevo) + logs (Sheets)
 components/
-  form/                     wizard, question rows, review, trip report, driver route, telltales
+  form/                     wizard, question rows, review, driver route, telltales
   three/                    NeonRoad, SteeringWheel3D
 lib/
   form-content.ts           ALL questions, guidelines and fields
