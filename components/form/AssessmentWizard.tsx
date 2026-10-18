@@ -28,7 +28,6 @@ import { buttonStyles } from "@/components/Buttons";
 import { Speedometer, StepPills } from "@/components/form/Dashboard";
 import { FieldInput, QuestionRow } from "@/components/form/Fields";
 import ReviewPanel from "@/components/form/ReviewPanel";
-import TripReport from "@/components/form/TripReport";
 import DriverRoute from "@/components/form/DriverRoute";
 import { TelltaleStrip, type TelltaleItem } from "@/components/form/Telltales";
 import SteeringWheel3D from "@/components/three/SteeringWheel3D";
@@ -75,7 +74,6 @@ export default function AssessmentWizard() {
   const telltales: TelltaleItem[] = allItems.map((i) => ({ key: i.key, label: i.label, flagged: i.state === "flagged" }));
   const pinsFor = (sectionId: string): CarPin[] =>
     (checks.find((c) => c.section.id === sectionId)?.items ?? []).flatMap((i) => (i.part ? [{ ...i, part: i.part }] : []));
-  const clearCount = allItems.filter((i) => i.state === "ok").length;
 
   // A line manager on a phone can lose the tab mid-drive — keep a draft for this browser session.
   useEffect(() => {
@@ -392,12 +390,6 @@ export default function AssessmentWizard() {
           {step.kind === "review" && (
             <>
               <h2 className="mb-4 text-lg font-bold">Review Your Submission</h2>
-              <TripReport
-                clear={clearCount}
-                total={allItems.length}
-                pins={pinsFor("vehicle")}
-                groups={checks.map((c) => ({ title: c.section.title, items: telltales.filter((t) => t.key.startsWith(`${c.section.id}.`)) }))}
-              />
               <ReviewPanel report={report} />
               {submitError && (
                 <p role="alert" className="mt-4 flex items-center gap-2 rounded-lg bg-brake-wash px-3 py-2 text-sm font-medium text-brake">

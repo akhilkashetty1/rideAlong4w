@@ -1,36 +1,10 @@
-import { TriangleAlert, CircleCheck } from "lucide-react";
 import type { ReportSection } from "@/lib/submission";
 import { cn } from "@/lib/utils";
 
-/** Read-only summary, follow-up items first. Also what gets printed. */
+/** Read-only summary of every answer, section by section. Also what gets printed. */
 export default function ReviewPanel({ report }: { report: ReportSection[] }) {
-  const flagged = report.flatMap((s) => s.rows.filter((r) => r.flagged).map((r) => ({ ...r, section: s.title })));
-
   return (
     <div className="space-y-6">
-      <div
-        className={cn(
-          "print-avoid-break rounded-xl border p-4",
-          flagged.length ? "border-az bg-[#fff6e6]" : "border-ok/40 bg-ok-wash",
-        )}
-      >
-        <p className="flex items-center gap-2 font-semibold">
-          {flagged.length ? <TriangleAlert className="h-5 w-5 text-az" /> : <CircleCheck className="h-5 w-5 text-ok" />}
-          {flagged.length ? `${flagged.length} item${flagged.length === 1 ? " needs" : "s need"} follow-up` : "All checks clear — nothing flagged"}
-        </p>
-        {flagged.length > 0 && (
-          <ul className="mt-2 space-y-1 pl-7 text-sm text-ink-soft">
-            {flagged.map((r) => (
-              <li key={r.column}>
-                <span className="font-medium text-ink">{r.section}:</span> {r.label.replace(/^\d+\.\s*/, "")} —{" "}
-                <span className="font-semibold text-brake">{r.value}</span>
-                {r.remark && <span className="italic"> ({r.remark})</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
       {report.map((section) => (
         <section key={section.title} className="print-avoid-break overflow-hidden rounded-xl border border-line">
           <h2 className="bg-night px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-neon">{section.title}</h2>
