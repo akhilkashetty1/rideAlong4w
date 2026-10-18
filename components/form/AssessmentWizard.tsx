@@ -7,8 +7,11 @@ import thankYou from "@/public/images/thank-you.jpg";
 import { ASSESSMENT_SECTIONS, FORM_META, PARTICIPANT_FIELDS, VEHICLE_FIELDS, type AssessmentSection, type YesNo } from "@/lib/form-content";
 import { QUESTION_VISUALS } from "@/lib/question-visuals";
 import {
+  FORM_VERSION,
   STEPS,
   answerKey,
+  detailKey,
+  todayIST,
   applyFieldChange,
   buildReport,
   initialState,
@@ -32,7 +35,8 @@ import SteeringWheel3D from "@/components/three/SteeringWheel3D";
 import WalkaroundCar, { type CarPin, type PinState } from "@/components/three/WalkaroundCar";
 import { cn } from "@/lib/utils";
 
-const DRAFT_KEY = "ride-along-4w:draft";
+// v2: answers no longer start pre-filled, so drafts saved by the old version are not restored.
+const DRAFT_KEY = "ride-along-4w:draft:v2";
 const PILL_LABELS = STEPS.filter((s) => s.kind !== "review").map((s) => s.label);
 
 export default function AssessmentWizard() {
@@ -46,6 +50,7 @@ export default function AssessmentWizard() {
   const [dirty, setDirty] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const restored = useRef(false);
+  const [today] = useState(todayIST);
   const topRef = useRef<HTMLDivElement>(null);
 
   const step = STEPS[stepIndex];
@@ -126,10 +131,26 @@ export default function AssessmentWizard() {
     clearError(id);
   };
   const setAnswer = (key: string, value: YesNo, expected: YesNo) => {
-    update((s) => ({ ...s, answers: { ...s.answers, [key]: { remark: s.answers[key]?.remark ?? "", answer: value } } }));
+    const firstTime = !state.answers[key]?.answer;
+    update((s) => ({ ...s, answers: { ...s.answers, [key]: { ...s.answers[key], remark: s.answers[key]?.remark ?? "", answer: value } } }));
     setNudge((n) => ({ n: n.n + 1, alert: value !== expected }));
     setActiveKey(key);
     clearError(key);
+
+    // Guide the line manager through every question: after a first answer, glide to the next
+    // unanswered one, unless this answer opened follow-up boxes that need filling here.
+    const section = ASSESSMENT_SECTIONS.find((s) => key.startsWith(`${s.id}.`));
+    const q = section?.questions.find((x) => answerKey(section.id, x.id) === key);
+    if (!firstTime || !section || (q?.followUp && q.followUp.when === value)) return;
+    const next = section.questions.map((x) => answerKey(section.id, x.id)).find((k) => k !== key && !state.answers[k]?.answer);
+    if (next) setTimeout(() => document.getElementById(`q-${next}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 280);
+  };
+  const setDetail = (key: string, fieldId: string, value: string) => {
+    update((s) => ({
+      ...s,
+      answers: { ...s.answers, [key]: { ...s.answers[key], details: { ...s.answers[key]?.details, [fieldId]: value } } },
+    }));
+    clearError(detailKey(key, fieldId));
   };
   const setRemark = (key: string, remark: string) =>
     update((s) => ({ ...s, answers: { ...s.answers, [key]: { ...s.answers[key], remark } } }));
@@ -140,10 +161,16 @@ export default function AssessmentWizard() {
   };
 
   const goNext = () => {
-    const errs = validateStep(step, state);
+    const errs = validateStep(step, state, { today });
     setErrors(errs);
     if (Object.keys(errs).length) {
-      requestAnimationFrame(() => (document.querySelector('[aria-invalid="true"]') as HTMLElement | null)?.focus());
+      // Take them to the first thing still missing: a question with no answer, a date, or a field.
+      requestAnimationFrame(() => {
+        const first = document.querySelector<HTMLElement>('[data-error="true"], [aria-invalid="true"]');
+        first?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const input = first?.matches("input, select, textarea") ? first : first?.querySelector<HTMLElement>('[aria-invalid="true"]');
+        input?.focus({ preventScroll: true });
+      });
       return;
     }
     setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
@@ -156,7 +183,13 @@ export default function AssessmentWizard() {
   async function submit() {
     setSubmitting(true);
     setSubmitError(null);
-    const payload = { fields: state.fields, answers: state.answers, confirmed: state.confirmed, completedAt: new Date().toISOString() };
+    const payload = {
+      formVersion: FORM_VERSION,
+      fields: state.fields,
+      answers: state.answers,
+      confirmed: state.confirmed,
+      completedAt: new Date().toISOString(),
+    };
     const finish = (how: "sent" | "queued") => {
       try {
         sessionStorage.removeItem(DRAFT_KEY);
@@ -217,6 +250,7 @@ export default function AssessmentWizard() {
   }
 
   const fieldErrors = Object.keys(errors).length;
+  const unanswered = Object.values(errors).filter((e) => e === "Choose Yes or No").length;
 
   const questionList = (section: AssessmentSection) =>
     section.questions.map((q, i) => {
@@ -233,6 +267,9 @@ export default function AssessmentWizard() {
           onActivate={() => setActiveKey(key)}
           onAnswer={(v) => setAnswer(key, v, q.expected ?? "Yes")}
           onRemark={(v) => setRemark(key, v)}
+          onDetail={(fieldId, v) => setDetail(key, fieldId, v)}
+          detailErrors={Object.fromEntries((q.followUp?.fields ?? []).map((f) => [f.id, errors[detailKey(key, f.id)]]))}
+          today={today}
         />
       );
     });
@@ -257,7 +294,9 @@ export default function AssessmentWizard() {
         {fieldErrors > 0 && (
           <p role="alert" className="mb-4 flex items-center gap-2 rounded-lg bg-brake-wash px-3 py-2 text-sm font-medium text-brake">
             <CircleAlert className="h-4 w-4 shrink-0" />
-            Please complete the highlighted field{fieldErrors === 1 ? "" : "s"} before continuing.
+            {unanswered > 0
+              ? `${unanswered} question${unanswered === 1 ? " still needs" : "s still need"} a Yes or No${fieldErrors > unanswered ? ", and some details are missing" : ""}. Highlighted below.`
+              : `Please complete the highlighted field${fieldErrors === 1 ? "" : "s"} before continuing.`}
           </p>
         )}
 
@@ -275,7 +314,24 @@ export default function AssessmentWizard() {
                       ))}
                     </div>
                   )}
-                  <h2 className="mb-3 text-lg font-bold">{section.title}</h2>
+                  {(() => {
+                    const total = section.questions.length;
+                    const answered = section.questions.filter((q) => state.answers[answerKey(section.id, q.id)]?.answer).length;
+                    return (
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-lg font-bold">{section.title}</h2>
+                        <span
+                          className={cn(
+                            "no-print rounded-full px-3 py-1 text-xs font-semibold tabular-nums transition-colors",
+                            answered === total ? "bg-ok text-white" : "bg-night text-neon",
+                          )}
+                          aria-live="polite"
+                        >
+                          {answered === total ? `All ${total} answered` : `${answered} of ${total} answered`}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {pins.length > 0 ? (
                     // Walkaround: the car beside the checks (sticky on desktop)

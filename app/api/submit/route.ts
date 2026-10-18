@@ -4,8 +4,10 @@ import {
   buildReport,
   countFlagged,
   formatDateTime,
+  FORM_VERSION,
   parseFormState,
   toSheetRow,
+  todayIST,
   validateAll,
   type ReportSection,
 } from "@/lib/submission";
@@ -23,7 +25,15 @@ function emailHtml(report: ReportSection[], flagged: number) {
             <td style="${cell}background:#f7f8fb;width:46%;">${escapeHtml(r.label)}</td>
             <td style="${cell}font-weight:bold;${r.flagged ? "color:#b3141a;" : ""}">${escapeHtml(r.value)}</td>
             ${s.kind === "assessment" ? `<td style="${cell}color:#454a54;">${escapeHtml(r.remark || "—")}</td>` : ""}
+          </tr>${(r.extras ?? [])
+            .map(
+              (x) => `<tr>
+            <td style="${cell}background:#f7f8fb;padding-left:24px;color:#454a54;">↳ ${escapeHtml(x.label)}</td>
+            <td style="${cell}font-weight:bold;">${escapeHtml(x.value)}</td>
+            ${s.kind === "assessment" ? `<td style="${cell}"></td>` : ""}
           </tr>`,
+            )
+            .join("")}`,
         )
         .join("");
       return `<h3 style="margin:24px 0 8px;color:#1b2a4a;">${escapeHtml(s.title)}</h3>
@@ -45,7 +55,13 @@ export async function POST(request: Request) {
     const state = parseFormState(body);
     if (!state) return NextResponse.json({ error: "Invalid submission" }, { status: 400 });
 
-    const errors = validateAll(state);
+    // Assessments saved offline are sent later; keep (and judge dates by) the time they were actually done.
+    const now = new Date();
+    const completed = new Date(typeof body?.completedAt === "string" ? body.completedAt : NaN);
+    const age = now.getTime() - completed.getTime();
+    const assessedAt = age >= -5 * 60_000 && age <= 30 * 86_400_000 ? completed : now;
+
+    const errors = validateAll(state, { today: todayIST(assessedAt), legacy: !(Number(body?.formVersion) >= FORM_VERSION) });
     if (Object.keys(errors).length) {
       return NextResponse.json({ error: "Some answers are missing", errors }, { status: 400 });
     }
@@ -69,11 +85,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Submissions are not configured yet" }, { status: 500 });
     }
 
-    // Assessments saved offline are sent later; keep the time they were actually done.
-    const now = new Date();
-    const completed = new Date(typeof body?.completedAt === "string" ? body.completedAt : NaN);
-    const age = now.getTime() - completed.getTime();
-    const assessedAt = age >= -5 * 60_000 && age <= 30 * 86_400_000 ? completed : now;
     const report = buildReport(state, assessedAt);
     const flagged = countFlagged(report);
     const { name, hq } = state.fields;

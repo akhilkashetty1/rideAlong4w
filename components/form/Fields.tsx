@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Info, TriangleAlert } from "lucide-react";
+import { CalendarCheck, Info, TriangleAlert } from "lucide-react";
 import { FORM_META, type FieldDef, type Question, type YesNo } from "@/lib/form-content";
 import { fieldOptions, type Answer } from "@/lib/submission";
 import { GripDiagram } from "@/components/SteeringWheel";
@@ -71,9 +71,21 @@ export function FieldInput({
         {label}
       </label>
       {field.kind === "select" ? (
-        <select id={id} value={value} onChange={(e) => onChange(field.id, e.target.value)} className={inputClass} {...common}>
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(field.id, e.target.value)}
+          className={cn(inputClass, !value && "text-muted")}
+          {...common}
+        >
+          {/* Nothing is pre-chosen: the line manager has to pick. */}
+          <option value="" disabled>
+            Select…
+          </option>
           {fieldOptions(field, fields).map((o) => (
-            <option key={o}>{o}</option>
+            <option key={o} value={o} className="text-ink">
+              {o}
+            </option>
           ))}
         </select>
       ) : (
@@ -104,6 +116,9 @@ export function QuestionRow({
   onActivate,
   onAnswer,
   onRemark,
+  onDetail,
+  detailErrors,
+  today,
 }: {
   /** `${sectionId}.${questionId}` — rows are found by it for the walkaround car and driver route. */
   qkey: string;
@@ -115,17 +130,25 @@ export function QuestionRow({
   error?: string;
   onAnswer: (v: YesNo) => void;
   onRemark: (v: string) => void;
+  /** Follow-up details (e.g. valid-till dates), when the question asks for them. */
+  onDetail?: (fieldId: string, v: string) => void;
+  detailErrors?: Record<string, string | undefined>;
+  /** Today as YYYY-MM-DD, the earliest valid-till date. */
+  today?: string;
 }) {
   const [showGuide, setShowGuide] = useState(false);
   const groupId = useId();
   const expected = question.expected ?? "Yes";
   const flagged = !!answer?.answer && answer.answer !== expected;
   const remark = answer?.remark ?? "";
+  const followUp = question.followUp && answer?.answer === question.followUp.when ? question.followUp : null;
+  const detailError = followUp?.fields.some((f) => detailErrors?.[f.id]);
 
   return (
     <div
       id={`q-${qkey}`}
       data-qkey={qkey}
+      data-error={error || detailError ? "true" : undefined}
       onFocusCapture={onActivate}
       onPointerDown={onActivate}
       className={cn(
@@ -133,7 +156,8 @@ export function QuestionRow({
         flagged ? "border-brake/60 shadow-[inset_4px_0_0_var(--color-brake)]" : "border-line",
         active && !flagged && "border-ink/50 shadow-[0_0_0_3px_rgba(223,226,43,.55)]",
         active && flagged && "shadow-[inset_4px_0_0_var(--color-brake),0_0_0_3px_rgba(193,39,45,.3)]",
-        error && "border-brake",
+        (error || detailError) && "border-brake",
+        !answer?.answer && !error && "border-dashed",
       )}
     >
       <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
@@ -188,6 +212,39 @@ export function QuestionRow({
           })}
         </div>
       </div>
+
+      {followUp && (
+        <div className="step-in mt-3 ml-10 rounded-lg border border-ok/40 bg-ok-wash/60 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink">
+            <CalendarCheck className="h-3.5 w-3.5 text-ok" /> Valid till: pick the date printed on each document
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {followUp.fields.map((f) => {
+              const fid = `${groupId}-${f.id}`;
+              const err = detailErrors?.[f.id];
+              return (
+                <div key={f.id}>
+                  <label htmlFor={fid} className={labelClass}>
+                    {f.label}
+                    <span className="text-brake"> *</span>
+                  </label>
+                  <input
+                    id={fid}
+                    type="date"
+                    value={answer?.details?.[f.id] ?? ""}
+                    min={today}
+                    onChange={(e) => onDetail?.(f.id, e.target.value)}
+                    aria-invalid={!!err}
+                    aria-describedby={err ? `${fid}-err` : undefined}
+                    className={cn(inputClass, "bg-white")}
+                  />
+                  <ErrorText id={`${fid}-err`}>{err}</ErrorText>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mt-3 pl-10">
         {flagged && (

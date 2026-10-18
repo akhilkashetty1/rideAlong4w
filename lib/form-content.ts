@@ -24,6 +24,11 @@ export type Question = {
   expected?: YesNo;
   /** Draws a small diagram next to the question. */
   illustration?: "steering-grip";
+  /**
+   * Extra details asked only for one answer, shown right under the question (e.g. the
+   * documents' valid-till dates when the answer is Yes). All of them are required then.
+   */
+  followUp?: { when: YesNo; fields: { id: string; label: string; kind: "date" }[] };
 };
 
 export type AssessmentSection = {
@@ -59,11 +64,12 @@ export const FORM_META = {
   thankYou: { line: "For Completing Ride Along Assessment", sign: "Take Care - Drive Safe" },
   remarkMaxLength: 175,
   /**
-   * Like the two-wheeler form, every question starts on its "all good" answer
-   * so the line manager only changes the exceptions. Set false to make every
-   * question an explicit choice.
+   * Every question starts unanswered, so the line manager has to make an explicit
+   * Yes/No choice on each one (client request: a pre-filled "all good" answer could be
+   * left untouched without really checking). Set true to start every question on its
+   * "all good" answer instead, like the two-wheeler form.
    */
-  prefillExpectedAnswers: true,
+  prefillExpectedAnswers: false,
 };
 
 /** Asked at the top of the first step, as on the two-wheeler form. */
@@ -259,7 +265,14 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
       {
         id: "documents",
         text: "Does the driver have valid 4 wheeler documents? (DL, Insurance & Emission)",
-        guideline: "Yes or No. Please verify and confirm.",
+        guideline: "Yes or No. Please verify and confirm. If Yes, enter the date each document is valid till.",
+        followUp: {
+          when: "Yes",
+          fields: [
+            { id: "dlValidTill", label: "Driving licence valid till", kind: "date" },
+            { id: "insuranceValidTill", label: "Insurance valid till", kind: "date" },
+          ],
+        },
       },
     ],
   },
@@ -283,8 +296,8 @@ export const VEHICLE_FIELDS: FieldDef[] = [
     options: { dependsOn: "primaryVehicle", map: FUEL_BY_VEHICLE },
   },
   { kind: "text", id: "primaryNumber", label: "Vehicle Number", required: true, maxLength: 20, placeholder: "e.g. KA01AB1234" },
-  { kind: "text", id: "primaryMake", label: "Manufacturer", maxLength: 60 },
-  { kind: "text", id: "primaryModel", label: "Model", maxLength: 60 },
+  { kind: "text", id: "primaryMake", label: "Manufacturer", required: true, maxLength: 60, placeholder: "e.g. Maruti Suzuki" },
+  { kind: "text", id: "primaryModel", label: "Model", required: true, maxLength: 60, placeholder: "e.g. Swift" },
   {
     kind: "radio",
     id: "useSecondary",
@@ -301,7 +314,7 @@ export const VEHICLE_FIELDS: FieldDef[] = [
     options: { dependsOn: "secondaryVehicle", map: FUEL_BY_VEHICLE },
     showIf: ifSecondary,
   },
-  { kind: "text", id: "secondaryNumber", label: "Secondary Vehicle Number", maxLength: 20, showIf: ifSecondary },
-  { kind: "text", id: "secondaryMake", label: "Secondary Manufacturer", maxLength: 60, showIf: ifSecondary },
-  { kind: "text", id: "secondaryModel", label: "Secondary Model", maxLength: 60, showIf: ifSecondary },
+  { kind: "text", id: "secondaryNumber", label: "Secondary Vehicle Number", required: true, maxLength: 20, showIf: ifSecondary },
+  { kind: "text", id: "secondaryMake", label: "Secondary Manufacturer", required: true, maxLength: 60, showIf: ifSecondary },
+  { kind: "text", id: "secondaryModel", label: "Secondary Model", required: true, maxLength: 60, showIf: ifSecondary },
 ];

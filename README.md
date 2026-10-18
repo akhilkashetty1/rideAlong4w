@@ -100,3 +100,22 @@ pages, form, review, PDF, email and Sheet columns are all generated from it.
    re-validates with the same `lib/submission.ts` the form uses.
 3. It builds the report once. The email (HTML-escaped, flagged answers in red)
    and the Sheet row both come from that report.
+
+## Every answer is a deliberate choice
+
+At the client's request, nothing on the form is pre-filled (`FORM_META.prefillExpectedAnswers: false`):
+
+- Every Yes/No question starts with neither button chosen, and **Next** is refused until all of a step's
+  questions are answered. Unanswered cards have a dashed border; on a refused Next they turn red, a banner
+  counts them and the page scrolls to the first one. Each step shows "X of Y answered", and a first answer
+  glides to the next unanswered question. Remarks stay optional.
+- The vehicle drop-downs start on "Select…", and Manufacturer and Model are required (for the secondary
+  vehicle too: number, manufacturer and model, when one is used).
+- **Documents question:** answering **Yes** opens two required date pickers, *Driving licence valid till*
+  and *Insurance valid till* (`followUp` on the question in `lib/form-content.ts`). A date in the past is
+  refused with "If the document has expired, answer No". The dates appear on the review, PDF and email and
+  as two extra Sheet/hub columns (`… — Driving licence valid till`, `… — Insurance valid till`); the Sheet
+  script adds new columns by itself.
+- **Older submissions still go through.** The form sends `formVersion: 2`; a submission saved offline by the
+  previous version (no `formVersion`) is checked by the old rules, so it isn't rejected when it's finally
+  sent. Dates are judged against the day the assessment was done, not the day it was sent.
