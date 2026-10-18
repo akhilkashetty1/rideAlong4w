@@ -48,7 +48,7 @@ export default function AssessmentWizard() {
   const [nudge, setNudge] = useState({ n: 0, alert: false });
   const [dirty, setDirty] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const restored = useRef(false);
+  const [restored, setRestored] = useState(false);
   const [today] = useState(todayIST);
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -82,14 +82,16 @@ export default function AssessmentWizard() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore after hydration
       if (saved) setState({ ...initialState(), ...JSON.parse(saved), confirmed: false });
     } catch {}
-    restored.current = true;
+    // Saving starts only on the render AFTER this one, when the restored answers are in `state`;
+    // saving in the same pass would overwrite the draft with the empty form.
+    setRestored(true);
   }, []);
   useEffect(() => {
-    if (!restored.current || done) return;
+    if (!restored || done) return;
     try {
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state));
     } catch {}
-  }, [state, done]);
+  }, [state, done, restored]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (dirty && !done) e.preventDefault();
