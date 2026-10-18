@@ -29,7 +29,7 @@ export type Answer = {
 export const FORM_VERSION = 2;
 
 /** Fields that became required in version 2. */
-const NEW_IN_V2 = new Set(["primaryMake", "primaryModel", "secondaryNumber", "secondaryMake", "secondaryModel"]);
+const NEW_IN_V2 = new Set(["primaryMake", "primaryModel"]);
 
 export type Rules = {
   /** Today in India as YYYY-MM-DD; dates before it are expired. Defaults to now. */

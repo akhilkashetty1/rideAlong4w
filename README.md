@@ -109,8 +109,8 @@ At the client's request, nothing on the form is pre-filled (`FORM_META.prefillEx
   questions are answered. Unanswered cards have a dashed border; on a refused Next they turn red, a banner
   counts them and the page scrolls to the first one. Each step shows "X of Y answered", and a first answer
   glides to the next unanswered question. Remarks stay optional.
-- The vehicle drop-downs start on "Select…", and Manufacturer and Model are required (for the secondary
-  vehicle too: number, manufacturer and model, when one is used).
+- Vehicle Details asks only for the four wheeler itself: Fuel Type (starts on "Select…"), Vehicle Number,
+  Manufacturer and Model, all required. There is no primary/secondary vehicle on this form.
 - **Documents question:** answering **Yes** opens two required date pickers, *Driving licence valid till*
   and *Insurance valid till* (`followUp` on the question in `lib/form-content.ts`). A date in the past is
   refused with "If the document has expired, answer No". The dates appear on the review, PDF and email and

@@ -278,43 +278,13 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
   },
 ];
 
-/** Final step — the vehicle on record, plus an optional secondary vehicle. */
-const FUEL_BY_VEHICLE: Record<string, string[]> = {
-  "4 Wheeler": ["Petrol", "Diesel", "CNG", "EV"],
-  "2 Wheeler": ["Petrol", "EV"],
-};
-
-const ifSecondary = { field: "useSecondary", equals: "Yes" };
-
+/**
+ * Final step: the four wheeler on record. (There is no primary/secondary vehicle on this form.)
+ * The ids keep their original names so assessments saved offline by an older version still match.
+ */
 export const VEHICLE_FIELDS: FieldDef[] = [
-  { kind: "select", id: "primaryVehicle", label: "Primary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"] },
-  {
-    kind: "select",
-    id: "primaryFuel",
-    label: "Primary Vehicle Fuel Type",
-    required: true,
-    options: { dependsOn: "primaryVehicle", map: FUEL_BY_VEHICLE },
-  },
+  { kind: "select", id: "primaryFuel", label: "Fuel Type", required: true, options: ["Petrol", "Diesel", "CNG", "EV"] },
   { kind: "text", id: "primaryNumber", label: "Vehicle Number", required: true, maxLength: 20, placeholder: "e.g. KA01AB1234" },
   { kind: "text", id: "primaryMake", label: "Manufacturer", required: true, maxLength: 60, placeholder: "e.g. Maruti Suzuki" },
   { kind: "text", id: "primaryModel", label: "Model", required: true, maxLength: 60, placeholder: "e.g. Swift" },
-  {
-    kind: "radio",
-    id: "useSecondary",
-    label: "Do you use a Secondary Vehicle for field work?",
-    required: true,
-    options: ["Yes", "No"],
-  },
-  { kind: "select", id: "secondaryVehicle", label: "Secondary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"], showIf: ifSecondary },
-  {
-    kind: "select",
-    id: "secondaryFuel",
-    label: "Secondary Vehicle Fuel Type",
-    required: true,
-    options: { dependsOn: "secondaryVehicle", map: FUEL_BY_VEHICLE },
-    showIf: ifSecondary,
-  },
-  { kind: "text", id: "secondaryNumber", label: "Secondary Vehicle Number", required: true, maxLength: 20, showIf: ifSecondary },
-  { kind: "text", id: "secondaryMake", label: "Secondary Manufacturer", required: true, maxLength: 60, showIf: ifSecondary },
-  { kind: "text", id: "secondaryModel", label: "Secondary Model", required: true, maxLength: 60, showIf: ifSecondary },
 ];
