@@ -119,3 +119,18 @@ At the client's request, nothing on the form is pre-filled (`FORM_META.prefillEx
 - **Older submissions still go through.** The form sends `formVersion: 2`; a submission saved offline by the
   previous version (no `formVersion`) is checked by the old rules, so it isn't rejected when it's finally
   sent. Dates are judged against the day the assessment was done, not the day it was sent.
+
+## The Google Sheet's heading row
+
+The Sheet script matches columns **by heading text**, so the headings must match what the form sends exactly.
+`scripts/sheet-headers.tsv` is the complete row (72 columns, ending with `Received At`) as one tab-separated line, and
+`npm run sheet-headers` regenerates it from the current form (add `-- --list` for a numbered list). To paste it in one go:
+
+```bash
+tr -d '\n' < scripts/sheet-headers.tsv | LC_ALL=en_US.UTF-8 pbcopy   # then click A1 in the Sheet and paste
+```
+
+Use that exact command: without the UTF-8 setting the long dash in "— Remarks" turns into garbage characters, and the
+script then adds a second, correct set of columns. The script writes to the **first tab**; when the headings change, keep the
+old tab as an archive (move it to the end) and paste the new row into a new first tab, since old rows don't line up
+under new headings.
