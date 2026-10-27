@@ -30,9 +30,9 @@ export async function POST(request: Request) {
     }
 
     const apiKey = process.env.BREVO_API_KEY;
-    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+    const senderEmail = process.env.BREVO_SENDER_EMAIL || "ridealongform.project@gmail.com";
     const senderName = process.env.BREVO_SENDER_NAME || FORM_META.shortTitle;
-    const adminEmail = process.env.ADMIN_EMAIL_PRIMARY;
+    const adminEmail = process.env.ADMIN_EMAIL_PRIMARY || "ridealongform@gmail.com";
     const adminCc = process.env.ADMIN_EMAIL_CC;
     const googleSheetUrl = process.env.GOOGLE_SHEET_WEBAPP_URL;
     const hubUrl = process.env.HUB_INGEST_URL;
