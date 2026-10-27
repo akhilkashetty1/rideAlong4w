@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { emailSubject, portalUrlFromIngest, renderEmail, renderEmailText, type EmailMeta } from "@/lib/email";
 import { FORM_META } from "@/lib/form-content";
 import {
   buildReport,
@@ -9,45 +10,7 @@ import {
   toSheetRow,
   todayIST,
   validateAll,
-  type ReportSection,
 } from "@/lib/submission";
-
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-
-function emailHtml(report: ReportSection[], flagged: number) {
-  const cell = "padding:8px 10px;border:1px solid #e5e7eb;vertical-align:top;";
-  const sections = report
-    .map((s) => {
-      const rows = s.rows
-        .map(
-          (r) => `<tr>
-            <td style="${cell}background:#f7f8fb;width:46%;">${escapeHtml(r.label)}</td>
-            <td style="${cell}font-weight:bold;${r.flagged ? "color:#b3141a;" : ""}">${escapeHtml(r.value)}</td>
-            ${s.kind === "assessment" ? `<td style="${cell}color:#454a54;">${escapeHtml(r.remark || "—")}</td>` : ""}
-          </tr>${(r.extras ?? [])
-            .map(
-              (x) => `<tr>
-            <td style="${cell}background:#f7f8fb;padding-left:24px;color:#454a54;">↳ ${escapeHtml(x.label)}</td>
-            <td style="${cell}font-weight:bold;">${escapeHtml(x.value)}</td>
-            ${s.kind === "assessment" ? `<td style="${cell}"></td>` : ""}
-          </tr>`,
-            )
-            .join("")}`,
-        )
-        .join("");
-      return `<h3 style="margin:24px 0 8px;color:#1b2a4a;">${escapeHtml(s.title)}</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>`;
-    })
-    .join("");
-
-  return `<div style="font-family:sans-serif;line-height:1.5;color:#1b1c20;max-width:720px;">
-    <h2 style="color:#1b2a4a;border-bottom:2px solid #da1f26;padding-bottom:10px;">New ${escapeHtml(FORM_META.title)} submission</h2>
-    <p><strong>${flagged}</strong> item${flagged === 1 ? "" : "s"} flagged for follow-up (shown in red).</p>
-    ${sections}
-    <p style="font-size:12px;color:#999;margin-top:30px;text-align:center;">Automated notification from the ${escapeHtml(FORM_META.shortTitle)} form.</p>
-  </div>`;
-}
 
 export async function POST(request: Request) {
   try {
@@ -88,6 +51,7 @@ export async function POST(request: Request) {
     const report = buildReport(state, assessedAt);
     const flagged = countFlagged(report);
     const { name, hq } = state.fields;
+    const meta: EmailMeta = { formName: FORM_META.shortTitle, who: `${name} (${hq})`, when: formatDateTime(assessedAt), portalUrl: portalUrlFromIngest(hubUrl) };
 
     type Channel = "email" | "sheet" | "hub";
     const operations: { kind: Channel; promise: Promise<boolean> }[] = [];
@@ -102,8 +66,10 @@ export async function POST(request: Request) {
             sender: { name: senderName, email: senderEmail },
             to: [{ email: adminEmail }],
             ...(adminCc ? { cc: [{ email: adminCc }] } : {}),
-            subject: `${FORM_META.shortTitle}: ${name} (${hq})${flagged ? ` — ${flagged} flagged` : ""}`,
-            htmlContent: emailHtml(report, flagged),
+            subject: emailSubject(FORM_META.shortTitle, `${name} (${hq})`, flagged),
+            htmlContent: renderEmail(report, meta),
+            textContent: renderEmailText(report, meta),
+            tags: ["ride-along", "4w"],
           }),
         }).then(async (res) => {
           if (!res.ok) console.error("Brevo response not ok:", res.status, await res.text().catch(() => ""));
