@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import { CalendarCheck, Info, TriangleAlert } from "lucide-react";
 import { FORM_META, type FieldDef, type Question, type YesNo } from "@/lib/form-content";
 import { fieldOptions, type Answer } from "@/lib/submission";
-import { GripDiagram } from "@/components/SteeringWheel";
+import { GripDiagram, PostureDiagram } from "@/components/SteeringWheel";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -180,6 +180,7 @@ export function QuestionRow({
               <div className="step-in mt-2 rounded-lg bg-paper-2 px-3 py-2 text-[0.82rem] text-ink-soft">
                 {question.guideline}
                 {question.illustration === "steering-grip" && <GripDiagram className="mt-2" />}
+                {question.illustration === "seating-posture" && <PostureDiagram className="mt-2" />}
               </div>
             )}
           </div>

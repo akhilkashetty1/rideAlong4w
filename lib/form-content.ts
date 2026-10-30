@@ -23,7 +23,7 @@ export type Question = {
   /** The answer that means "all good". Anything else is flagged. Defaults to "Yes". */
   expected?: YesNo;
   /** Draws a small diagram next to the question. */
-  illustration?: "steering-grip";
+  illustration?: "steering-grip" | "seating-posture";
   /**
    * Extra details asked only for one answer, shown right under the question (e.g. the
    * documents' valid-till dates when the answer is Yes). All of them are required then.
@@ -222,13 +222,13 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
         id: "traffic-signals",
         text: "Does the driver stop at traffic signals?",
         guideline:
-          "Driver should stop at a red light and slow down at a yellow light. Signal jumping violations can be checked on traffic police websites, UPI apps / mParivahan app etc.",
+          "Driver should stop at a red light and slow down at an orange light. Signal jumping violations can be checked on traffic police websites, UPI apps / mParivahan app etc.",
       },
       {
         id: "mobile-phone",
-        text: "Does the driver use a mobile phone while driving?",
+        text: "Does the driver use a mobile phone or get distracted while driving?",
         guideline:
-          "Usage of a mobile phone while driving is illegal and is not suggested for safety purposes as it may cause distractions while driving.",
+          "Usage of a mobile phone while driving is illegal and is not suggested for safety purposes as it may cause distractions while driving. Distracted driving also includes eating, adjusting the music or navigation, reaching for objects or talking with passengers instead of watching the road. Highlight if the driver is distracted in any of these ways.",
         expected: "No",
       },
       {
@@ -274,17 +274,54 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
           ],
         },
       },
+      {
+        id: "seating-posture",
+        text: "Is the driver's sitting position (ergonomics) correct?",
+        guideline:
+          "Check that the back is fully supported by the seat and the head is level with the headrest. Elbows and knees should be slightly bent, with the knees clear of the steering wheel, so the driver reaches the wheel and pedals without stretching or slouching. A poor position causes fatigue and back aches. Refer to the image.",
+        illustration: "seating-posture",
+      },
     ],
   },
 ];
 
-/**
- * Final step: the four wheeler on record. (There is no primary/secondary vehicle on this form.)
- * The ids keep their original names so assessments saved offline by an older version still match.
- */
+/** Final step — the vehicle on record, plus an optional secondary vehicle. */
+const FUEL_BY_VEHICLE: Record<string, string[]> = {
+  "4 Wheeler": ["Petrol", "Diesel", "CNG", "EV"],
+  "2 Wheeler": ["Petrol", "EV"],
+};
+
+const ifSecondary = { field: "useSecondary", equals: "Yes" };
+
 export const VEHICLE_FIELDS: FieldDef[] = [
-  { kind: "select", id: "primaryFuel", label: "Fuel Type", required: true, options: ["Petrol", "Diesel", "CNG", "EV"] },
+  { kind: "select", id: "primaryVehicle", label: "Primary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"] },
+  {
+    kind: "select",
+    id: "primaryFuel",
+    label: "Primary Vehicle Fuel Type",
+    required: true,
+    options: { dependsOn: "primaryVehicle", map: FUEL_BY_VEHICLE },
+  },
   { kind: "text", id: "primaryNumber", label: "Vehicle Number", required: true, maxLength: 20, placeholder: "e.g. KA01AB1234" },
   { kind: "text", id: "primaryMake", label: "Manufacturer", required: true, maxLength: 60, placeholder: "e.g. Maruti Suzuki" },
   { kind: "text", id: "primaryModel", label: "Model", required: true, maxLength: 60, placeholder: "e.g. Swift" },
+  {
+    kind: "radio",
+    id: "useSecondary",
+    label: "Do you use a Secondary Vehicle for field work?",
+    required: true,
+    options: ["Yes", "No"],
+  },
+  { kind: "select", id: "secondaryVehicle", label: "Secondary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"], showIf: ifSecondary },
+  {
+    kind: "select",
+    id: "secondaryFuel",
+    label: "Secondary Vehicle Fuel Type",
+    required: true,
+    options: { dependsOn: "secondaryVehicle", map: FUEL_BY_VEHICLE },
+    showIf: ifSecondary,
+  },
+  { kind: "text", id: "secondaryNumber", label: "Secondary Vehicle Number", required: true, maxLength: 20, showIf: ifSecondary },
+  { kind: "text", id: "secondaryMake", label: "Secondary Manufacturer", required: true, maxLength: 60, showIf: ifSecondary },
+  { kind: "text", id: "secondaryModel", label: "Secondary Model", required: true, maxLength: 60, showIf: ifSecondary },
 ];

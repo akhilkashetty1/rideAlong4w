@@ -23,6 +23,7 @@ const { initialState, answerKey, buildReport, toSheetRow } = await import(path.j
 // A form with every optional part switched on, so every column appears.
 const state = initialState();
 for (const id of Object.keys(state.fields)) state.fields[id] = "x";
+state.fields.useSecondary = "Yes"; // the secondary-vehicle columns only appear for a "Yes"
 for (const s of ASSESSMENT_SECTIONS) {
   for (const q of s.questions) {
     state.answers[answerKey(s.id, q.id)] = {

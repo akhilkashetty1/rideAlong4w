@@ -1,5 +1,5 @@
 import type { AssessmentSection } from "@/lib/form-content";
-import { GripDiagram } from "@/components/SteeringWheel";
+import { GripDiagram, PostureDiagram } from "@/components/SteeringWheel";
 
 /** The PDF's guidelines table — a real table from `sm` up, stacked cards on phones. */
 export default function GuidelinesTable({ section }: { section: AssessmentSection }) {
@@ -21,6 +21,7 @@ export default function GuidelinesTable({ section }: { section: AssessmentSectio
               <td className="border border-line px-3 py-3 text-ink-soft">
                 {q.guideline}
                 {q.illustration === "steering-grip" && <GripDiagram className="mt-3" />}
+                {q.illustration === "seating-posture" && <PostureDiagram className="mt-3" />}
               </td>
             </tr>
           ))}
@@ -37,6 +38,7 @@ export default function GuidelinesTable({ section }: { section: AssessmentSectio
             <div className="border-l-4 border-brake px-3 py-2.5 text-[0.82rem] text-ink-soft">
               {q.guideline}
               {q.illustration === "steering-grip" && <GripDiagram className="mt-3 justify-center" />}
+              {q.illustration === "seating-posture" && <PostureDiagram className="mt-3 justify-center" />}
             </div>
           </li>
         ))}

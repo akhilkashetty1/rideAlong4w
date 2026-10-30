@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import logo from "@/public/images/safe-rider-logo.png";
+import logo from "@/public/images/drive-safe-logo.png";
 import { ASSESSMENT_SECTIONS } from "@/lib/form-content";
 import FramedCard from "@/components/FramedCard";
 import GuidelinesTable from "@/components/GuidelinesTable";
@@ -33,7 +33,7 @@ export default async function GuidelinesPage({ params }: Props) {
     <main className="px-3 py-6 sm:px-6 sm:py-10">
       <FramedCard>
         <header className="mb-5 flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
-          <Image src={logo} alt="Safe Rider — Ride safe. Stay safe." className="h-auto w-36 sm:w-44" priority />
+          <Image src={logo} alt="Drive Safe: Make every mile safe." className="h-auto w-40 sm:w-48" priority />
           <div className="text-center sm:flex-1 sm:text-left">
             <h1 className="font-poster text-[clamp(1.6rem,5vw,2.6rem)] uppercase leading-none text-brake">Assessment Guidelines</h1>
             <p className="mt-1 text-sm font-medium text-ink-soft">

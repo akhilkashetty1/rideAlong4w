@@ -99,4 +99,5 @@ export const QUESTION_VISUALS: Record<string, { icon: IconComponent; part?: CarP
   "driver.courtesy": { icon: HeartHandshake },
   "driver.steering-grip": { icon: Wheel },
   "driver.documents": { icon: FileCheck },
+  "driver.seating-posture": { icon: Armchair },
 };

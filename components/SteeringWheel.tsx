@@ -51,3 +51,73 @@ export function GripDiagram({ className }: { className?: string }) {
     </div>
   );
 }
+
+/**
+ * Driver question about the driving position: a side view of a seated driver, right and wrong.
+ * Right: back against the seat, head level with the headrest, elbows and knees slightly bent.
+ * Wrong: slouched, reaching for the wheel with straight arms and straight legs.
+ */
+export function PostureDiagram({ className }: { className?: string }) {
+  type P = [number, number];
+  const pts = (p: P[]) => p.map((q) => q.join(",")).join(" ");
+  const figure = (
+    label: string,
+    sub: string,
+    f: { head: P; torso: P[]; arm: P[]; leg: P[]; joints: P[] },
+    good: boolean,
+  ) => (
+    <figure className="flex flex-col items-center gap-1">
+      <svg viewBox="0 0 120 100" className="h-24 w-[7.5rem] text-ink" aria-hidden>
+        {/* seat, headrest, steering wheel and column, pedal, floor */}
+        <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+          <polyline points="12,30 14,72 48,72" strokeWidth="6" />
+          <path d="M11 20l.6 8" strokeWidth="7" />
+          <path d="M88 26l8 30M96 56l9 14" strokeWidth="5" />
+          <path d="M72 90h16" strokeWidth="4" />
+          <path d="M4 93h112" strokeWidth="3" />
+        </g>
+        <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6">
+          <polyline points={pts(f.torso)} />
+          <polyline points={pts(f.arm)} />
+          <polyline points={pts(f.leg)} />
+        </g>
+        <circle cx={f.head[0]} cy={f.head[1]} r="8" fill="currentColor" />
+        {f.joints.map((j, i) => (
+          <circle key={i} cx={j[0]} cy={j[1]} r="4.5" fill={good ? "var(--color-neon)" : "var(--color-brake)"} stroke="#fff" strokeWidth="1.5" />
+        ))}
+      </svg>
+      <figcaption className="max-w-[9rem] text-center text-[0.7rem] leading-tight text-ink-soft">
+        <strong className={cn("block", good ? "text-ink" : "text-brake")}>{label}</strong>
+        {sub}
+      </figcaption>
+    </figure>
+  );
+  return (
+    <div className={cn("flex items-start gap-4", className)}>
+      {figure(
+        "Right position",
+        "back supported, elbows and knees slightly bent",
+        {
+          head: [21, 24],
+          torso: [[23, 66], [21, 38]],
+          arm: [[21, 40], [46, 56], [90, 38]],
+          leg: [[23, 66], [54, 64], [60, 88], [74, 88]],
+          joints: [[46, 56], [54, 64]],
+        },
+        true,
+      )}
+      {figure(
+        "Wrong position",
+        "slouched, arms and legs fully stretched",
+        {
+          head: [46, 34],
+          torso: [[22, 68], [28, 54], [38, 44]],
+          arm: [[38, 46], [64, 42], [90, 38]],
+          leg: [[22, 68], [52, 78], [82, 88]],
+          joints: [[64, 42], [52, 78]],
+        },
+        false,
+      )}
+    </div>
+  );
+}

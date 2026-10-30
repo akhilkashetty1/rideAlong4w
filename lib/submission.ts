@@ -26,10 +26,13 @@ export type Answer = {
  * version (it has no `formVersion`, or a lower one) is checked by the rules it was filled in
  * under, so it still goes through when it's finally sent.
  */
-export const FORM_VERSION = 2;
+export const FORM_VERSION = 3;
 
 /** Fields that became required in version 2. */
-const NEW_IN_V2 = new Set(["primaryMake", "primaryModel"]);
+const NEW_IN_V2 = new Set(["primaryMake", "primaryModel", "secondaryNumber", "secondaryMake", "secondaryModel"]);
+
+/** Questions added in version 3 (the driving position). An assessment saved by an older version won't have an answer. */
+const NEW_QUESTIONS_V3 = new Set(["driver.seating-posture"]);
 
 export type Rules = {
   /** Today in India as YYYY-MM-DD; dates before it are expired. Defaults to now. */
@@ -157,7 +160,7 @@ export function validateStep(step: Step, state: FormState, rules: Rules = {}): E
       const key = answerKey(section.id, q.id);
       const a = state.answers[key];
       if (!a?.answer) {
-        errors[key] = "Choose Yes or No";
+        if (!(rules.legacy && NEW_QUESTIONS_V3.has(key))) errors[key] = "Choose Yes or No";
         continue;
       }
       if (q.followUp && a.answer === q.followUp.when && !rules.legacy) {

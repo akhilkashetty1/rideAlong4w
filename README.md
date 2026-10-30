@@ -87,7 +87,7 @@ lib/
   pdf.ts                    Download-as-PDF
 scripts/
   google-sheets-submission-log.gs
-public/images/              cover, thank-you poster, Safe Rider logo
+public/images/              cover and thank-you posters (Drive Safe logo baked in), drive-safe-logo.png for the guidelines pages
 ```
 
 **Editing content:** everything lives in `lib/form-content.ts`. The guidelines
@@ -109,8 +109,11 @@ At the client's request, nothing on the form is pre-filled (`FORM_META.prefillEx
   questions are answered. Unanswered cards have a dashed border; on a refused Next they turn red, a banner
   counts them and the page scrolls to the first one. Each step shows "X of Y answered", and a first answer
   glides to the next unanswered question. Remarks stay optional.
-- Vehicle Details asks only for the four wheeler itself: Fuel Type (starts on "Select…"), Vehicle Number,
-  Manufacturer and Model, all required. There is no primary/secondary vehicle on this form.
+- The vehicle drop-downs start on "Select…", and Manufacturer and Model are required (for the secondary
+  vehicle too: number, manufacturer and model, when one is used).
+- **Driver question 6** covers a mobile phone *or* any other distraction. **Question 13** is the driving position
+  (ergonomics), with a right/wrong side-view diagram (`PostureDiagram`). It was added last so no existing
+  question was renumbered; assessments saved offline by an older version (`FORM_VERSION` < 3) don't need it.
 - **Documents question:** answering **Yes** opens two required date pickers, *Driving licence valid till*
   and *Insurance valid till* (`followUp` on the question in `lib/form-content.ts`). A date in the past is
   refused with "If the document has expired, answer No". The dates appear on the review, PDF and email and
@@ -123,7 +126,7 @@ At the client's request, nothing on the form is pre-filled (`FORM_META.prefillEx
 ## The Google Sheet's heading row
 
 The Sheet script matches columns **by heading text**, so the headings must match what the form sends exactly.
-`scripts/sheet-headers.tsv` is the complete row (72 columns, ending with `Received At`) as one tab-separated line, and
+`scripts/sheet-headers.tsv` is the complete row (81 columns, ending with `Received At`) as one tab-separated line, and
 `npm run sheet-headers` regenerates it from the current form (add `-- --list` for a numbered list). To paste it in one go:
 
 ```bash
