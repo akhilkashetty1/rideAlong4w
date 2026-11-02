@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins, Rubik_Dirt, Russo_One } from "next/font/google";
 import "./globals.css";
+import ClosedScreen from "@/components/ClosedScreen";
 import { FORM_META } from "@/lib/form-content";
+import { formGate } from "@/lib/form-gate";
 import OutboxSync from "@/components/OutboxSync";
 
 // Poppins carries over from the 2W form; Rubik Dirt matches the posters' distressed lettering.
@@ -18,11 +20,12 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#0a0c0f" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const gate = await formGate();
   return (
     <html lang="en" className={`${poppins.variable} ${dirt.variable} ${russo.variable}`}>
       <body className="min-h-dvh font-sans antialiased">
-        {children}
+        {gate.open ? children : <ClosedScreen title={gate.title} message={gate.message} />}
         <OutboxSync />
       </body>
     </html>

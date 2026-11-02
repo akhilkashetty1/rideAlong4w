@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { emailSubject, portalUrlFromIngest, renderEmail, renderEmailText, type EmailMeta } from "@/lib/email";
 import { FORM_META } from "@/lib/form-content";
+import { formGate } from "@/lib/form-gate";
 import {
   buildReport,
   countFlagged,
@@ -13,6 +14,11 @@ import {
 } from "@/lib/submission";
 
 export async function POST(request: Request) {
+  // Closed from the hub (Forms): refuse, and tell the form so it can show the closed screen and keep the answers.
+  // (Assessments saved offline stay queued on the device and go through once the form is open again.)
+  const gate = await formGate({ fresh: true });
+  if (!gate.open) return NextResponse.json({ error: "closed", closed: { title: gate.title, message: gate.message } }, { status: 403 });
+
   try {
     const body = await request.json().catch(() => null);
     const state = parseFormState(body);

@@ -33,6 +33,7 @@ import DriverRoute from "@/components/form/DriverRoute";
 import { TelltaleStrip, type TelltaleItem } from "@/components/form/Telltales";
 import SteeringWheel3D from "@/components/three/SteeringWheel3D";
 import WalkaroundCar, { type CarPin, type PinState } from "@/components/three/WalkaroundCar";
+import ClosedScreen from "@/components/ClosedScreen";
 import { cn } from "@/lib/utils";
 
 // v2: answers no longer start pre-filled, so drafts saved by the old version are not restored.
@@ -46,6 +47,7 @@ export default function AssessmentWizard() {
   const [done, setDone] = useState<false | "sent" | "queued">(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [closed, setClosed] = useState<{ title: string; message: string } | null>(null);
   const [nudge, setNudge] = useState({ n: 0, alert: false });
   const [dirty, setDirty] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -207,6 +209,11 @@ export default function AssessmentWizard() {
       const res = await postSubmission(payload);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        if (res.status === 403 && body.error === "closed") {
+          // An admin closed the form while they were filling it in: their answers stay in this page and in the draft.
+          setClosed(body.closed ?? { title: "", message: "" });
+          return;
+        }
         throw new Error(body.error || "Something went wrong. Please try again.");
       }
       finish("sent");
@@ -226,6 +233,8 @@ export default function AssessmentWizard() {
     setStepIndex(0);
     setDone(false);
   };
+
+  if (closed) return <ClosedScreen title={closed.title} message={closed.message} keepsAnswers onReopened={() => setClosed(null)} />;
 
   if (done) {
     return (

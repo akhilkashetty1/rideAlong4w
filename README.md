@@ -26,6 +26,16 @@ The content and flow match 2W. The 4W version presents them as a real car would:
 Icons and car parts for each question live in `lib/question-visuals.tsx`, so `lib/form-content.ts` stays pure copy.
 All motion respects `prefers-reduced-motion`. The 3D views only add to the form, which works without them.
 
+## Closing the form from the hub
+
+An admin can close this form in the submissions hub (Forms). Then every page shows a "Submissions have ended" screen
+(`components/ClosedScreen.tsx`) and `POST /api/submit` answers 403 `closed`; a rider part-way through keeps their answers and can
+submit once the form is open again. `lib/form-gate.ts` asks the hub at `<HUB_INGEST_URL origin>/api/form-status/4w`
+(cached 10 s for page loads, fresh on submit). If the hub can't be reached the form stays open. Uses the existing
+`HUB_INGEST_URL`; nothing new to configure.
+
+Assessments saved offline stay queued on the device while the form is closed and go through once it opens.
+
 ## Tech stack
 
 | | |
