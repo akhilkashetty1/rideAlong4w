@@ -228,7 +228,7 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
         id: "mobile-phone",
         text: "Does the driver use a mobile phone or get distracted while driving?",
         guideline:
-          "Usage of a mobile phone while driving is illegal and is not suggested for safety purposes as it may cause distractions while driving. Distracted driving also includes eating, adjusting the music or navigation, reaching for objects or talking with passengers instead of watching the road. Highlight if the driver is distracted in any of these ways.",
+          "Usage of a mobile phone while driving is prohibited by Indian road law and AZ SHE guidelines. Distracted driving also includes eating, adjusting the music or navigation, reaching for objects or talking with passengers instead of watching the road. Highlight if the driver is distracted in any of these ways.",
         expected: "No",
       },
       {
@@ -263,9 +263,17 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
         illustration: "steering-grip",
       },
       {
+        id: "seating-posture",
+        text: "Is the driver's sitting position (ergonomics) correct?",
+        guideline:
+          "Check that the back is fully supported by the seat and the head is level with the headrest. Elbows and knees should be slightly bent, with the knees clear of the steering wheel, so the driver reaches the wheel and pedals without stretching or slouching. A poor position causes fatigue and back aches. Refer to the image.",
+        illustration: "seating-posture",
+      },
+      {
         id: "documents",
         text: "Does the driver have valid 4 wheeler documents? (DL, Insurance & Emission)",
-        guideline: "Yes or No. Please verify and confirm. If Yes, enter the date each document is valid till.",
+        guideline:
+          "Yes or No. Please verify and confirm. If Yes, enter the date each document is valid till. Under the Motor Vehicles Act in India, driving without a valid driving licence (DL) and without vehicle insurance attracts strict monetary fines, potential imprisonment, and vehicle impoundment.",
         followUp: {
           when: "Yes",
           fields: [
@@ -273,13 +281,6 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
             { id: "insuranceValidTill", label: "Insurance valid till", kind: "date" },
           ],
         },
-      },
-      {
-        id: "seating-posture",
-        text: "Is the driver's sitting position (ergonomics) correct?",
-        guideline:
-          "Check that the back is fully supported by the seat and the head is level with the headrest. Elbows and knees should be slightly bent, with the knees clear of the steering wheel, so the driver reaches the wheel and pedals without stretching or slouching. A poor position causes fatigue and back aches. Refer to the image.",
-        illustration: "seating-posture",
       },
     ],
   },
