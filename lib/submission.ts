@@ -26,13 +26,16 @@ export type Answer = {
  * version (it has no `formVersion`, or a lower one) is checked by the rules it was filled in
  * under, so it still goes through when it's finally sent.
  */
-export const FORM_VERSION = 4;
+export const FORM_VERSION = 5;
 
 /** Fields that became required in version 2. */
 const NEW_IN_V2 = new Set(["primaryMake", "primaryModel", "secondaryNumber", "secondaryMake", "secondaryModel"]);
 
 /** Fields added in version 4 ("is this four-wheeler your primary vehicle?" and this vehicle's own details). */
 const NEW_IN_V4 = new Set(["isPrimary", "vehicleFuel", "vehicleNumber", "vehicleMake", "vehicleModel"]);
+
+/** Fields added in version 5 ("add your primary vehicle's details, or skip?"). Version 4 always had the details. */
+const NEW_IN_V5 = new Set(["addPrimary"]);
 
 /** Questions added in version 3 (the driving position). An assessment saved by an older version won't have an answer. */
 const NEW_QUESTIONS_V3 = new Set(["driver.seating-posture"]);
@@ -112,7 +115,28 @@ export function isVisible(field: FieldDef, fields: Record<string, string>) {
   return [field.showIf].flat().every((c) => fields[c.field] === c.equals);
 }
 
-/** Sets a field and resets any select whose options depend on it and no longer include its value. */
+/**
+ * Empties every field that is not currently shown (and whatever that in turn hides), so a field that appears
+ * later always starts blank. Without this, an answer given earlier (say "Yes" to the secondary-vehicle question,
+ * before switching the primary-vehicle answer or after restoring a saved draft) would silently re-appear
+ * pre-selected the next time the question is revealed.
+ */
+export function clearHidden(fields: Record<string, string>) {
+  let next = fields;
+  for (let pass = 0; pass < 4; pass++) {
+    let changed = false;
+    for (const f of ALL_FIELDS) {
+      if (isVisible(f, next) || !next[f.id]) continue;
+      if (next === fields) next = { ...fields };
+      next[f.id] = "";
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return next;
+}
+
+/** Sets a field, resets any select whose options depend on it, and empties whatever it just hid. */
 export function applyFieldChange(fields: Record<string, string>, id: string, value: string) {
   const next = { ...fields, [id]: value };
   for (const f of ALL_FIELDS) {
@@ -121,7 +145,7 @@ export function applyFieldChange(fields: Record<string, string>, id: string, val
     // A choice that no longer fits (e.g. CNG after switching to 2 Wheeler) is cleared, so it's chosen again.
     if (!opts.includes(next[f.id])) next[f.id] = "";
   }
-  return next;
+  return clearHidden(next);
 }
 
 export function initialState(): FormState {
@@ -148,7 +172,7 @@ function validateFields(defs: FieldDef[], fields: Record<string, string>, errors
   for (const f of defs) {
     if (!isVisible(f, fields)) continue;
     const v = (fields[f.id] ?? "").trim();
-    const required = f.required && !(rules.legacy && (NEW_IN_V2.has(f.id) || NEW_IN_V4.has(f.id)));
+    const required = f.required && !(rules.legacy && (NEW_IN_V2.has(f.id) || NEW_IN_V4.has(f.id) || NEW_IN_V5.has(f.id)));
     if (required && !v) errors[f.id] = f.kind === "select" ? "Please choose one" : "This field is required";
     else if (v && f.kind !== "text" && !fieldOptions(f, fields).includes(v)) errors[f.id] = "Choose one of the options";
   }
@@ -264,7 +288,7 @@ type VehicleInfo = { type: string; fuel: string; number: string; make: string; m
  *  - "Is this four-wheeler your primary vehicle?" Yes → this four-wheeler is the primary; the optional
  *    secondary vehicle comes from the secondary questions.
  *  - No → this four-wheeler is the secondary vehicle (no need to ask), and the primary vehicle comes from
- *    the "Your primary vehicle" questions.
+ *    the "Your primary vehicle" questions, unless they skipped those.
  *  - Answered before that question existed (an assessment saved offline by an older version): the old
  *    primary / secondary fields are used as they were.
  */
@@ -283,7 +307,11 @@ export function resolveVehicles(f: Record<string, string>): {
   });
   const secondary = f.useSecondary === "Yes" ? named("secondary") : null;
   if (f.isPrimary === "Yes") return { thisIsPrimary: "Yes", primary: thisVehicle, secondary };
-  if (f.isPrimary === "No") return { thisIsPrimary: "No", primary: named("primary"), secondary: thisVehicle };
+  if (f.isPrimary === "No") {
+    // "Skip" = they chose not to give the primary vehicle's details: they are reported as "Not provided".
+    const none: VehicleInfo = { type: "", fuel: "", number: "", make: "", model: "" };
+    return { thisIsPrimary: "No", primary: f.addPrimary === "Skip" ? none : named("primary"), secondary: thisVehicle };
+  }
   return { thisIsPrimary: "", primary: named("primary"), secondary };
 }
 

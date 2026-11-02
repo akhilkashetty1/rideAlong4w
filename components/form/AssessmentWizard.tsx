@@ -13,6 +13,7 @@ import {
   detailKey,
   todayIST,
   applyFieldChange,
+  clearHidden,
   buildReport,
   initialState,
   isVisible,
@@ -79,8 +80,13 @@ export default function AssessmentWizard() {
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(DRAFT_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore after hydration
-      if (saved) setState({ ...initialState(), ...JSON.parse(saved), confirmed: false });
+      if (saved) {
+        const draft = JSON.parse(saved);
+        const base = initialState();
+        // Fields a draft holds for questions that are not shown are dropped, so they cannot re-appear pre-answered.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore after hydration
+        setState({ ...base, ...draft, fields: clearHidden({ ...base.fields, ...draft.fields }), confirmed: false });
+      }
     } catch {}
     // Saving starts only on the render AFTER this one, when the restored answers are in `state`;
     // saving in the same pass would overwrite the draft with the empty form.
