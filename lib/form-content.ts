@@ -41,18 +41,23 @@ export type AssessmentSection = {
   questions: Question[];
 };
 
+/** A field shows only while another field holds this value. */
+export type Condition = { field: string; equals: string };
+
 type FieldBase = {
   id: string;
   label: string;
   required?: boolean;
-  /** Only show (and only validate / submit) when another field has this value. */
-  showIf?: { field: string; equals: string };
+  /** Only show (and only validate / submit) when these conditions all hold. */
+  showIf?: Condition | Condition[];
+  /** A small heading shown above this field when it starts a new group of fields. */
+  group?: string;
 };
 
 export type FieldDef =
   | (FieldBase & { kind: "text"; placeholder?: string; maxLength?: number })
   | (FieldBase & { kind: "select"; options: string[] | { dependsOn: string; map: Record<string, string[]> } })
-  | (FieldBase & { kind: "radio"; options: string[] });
+  | (FieldBase & { kind: "radio"; options: string[]; /** A line shown under the question for a chosen answer. */ notes?: Record<string, string> });
 
 export const FORM_META = {
   title: "Four Wheeler Ride Along Form",
@@ -286,43 +291,80 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
   },
 ];
 
-/** Final step — the vehicle on record, plus an optional secondary vehicle. */
+/**
+ * Final step — the vehicle on record. This is the four-wheeler form, so the vehicle in front of us is a
+ * four-wheeler: we ask whether it is the person's primary vehicle.
+ *
+ *  - Yes → it is the primary vehicle; they may also have a secondary vehicle for field work.
+ *  - No  → it is recorded as the secondary vehicle automatically, and we ask for their primary vehicle
+ *          instead (no separate "secondary vehicle?" question — that is already answered).
+ *
+ * The Sheet, e-mail and PDF always speak of "Primary" and "Secondary" vehicles; submission.ts files these
+ * answers under the right one (see `vehicleRows`).
+ */
 const FUEL_BY_VEHICLE: Record<string, string[]> = {
   "4 Wheeler": ["Petrol", "Diesel", "CNG", "EV"],
   "2 Wheeler": ["Petrol", "EV"],
 };
 
-const ifSecondary = { field: "useSecondary", equals: "Yes" };
+const notPrimary: Condition = { field: "isPrimary", equals: "No" };
+const isPrimary: Condition = { field: "isPrimary", equals: "Yes" };
+const hasSecondary: Condition = { field: "useSecondary", equals: "Yes" };
 
 export const VEHICLE_FIELDS: FieldDef[] = [
-  { kind: "select", id: "primaryVehicle", label: "Primary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"] },
+  {
+    kind: "radio",
+    id: "isPrimary",
+    label: "Is this four-wheeler your primary vehicle?",
+    required: true,
+    options: ["Yes", "No"],
+    notes: {
+      No: "No problem — we'll record this four-wheeler as your secondary vehicle, and ask about your primary vehicle below.",
+    },
+  },
+
+  // This four-wheeler — always asked.
+  { kind: "select", id: "vehicleFuel", label: "Vehicle Fuel Type", required: true, options: FUEL_BY_VEHICLE["4 Wheeler"], group: "This four-wheeler" },
+  { kind: "text", id: "vehicleNumber", label: "Vehicle Number", required: true, maxLength: 20, placeholder: "e.g. KA01AB1234", group: "This four-wheeler" },
+  { kind: "text", id: "vehicleMake", label: "Manufacturer", required: true, maxLength: 60, placeholder: "e.g. Maruti Suzuki", group: "This four-wheeler" },
+  { kind: "text", id: "vehicleModel", label: "Model", required: true, maxLength: 60, placeholder: "e.g. Swift", group: "This four-wheeler" },
+
+  // "No" — this is the secondary vehicle, so ask for the primary one.
+  { kind: "select", id: "primaryVehicle", label: "Primary Vehicle Type", required: true, options: ["4 Wheeler", "2 Wheeler"], showIf: notPrimary, group: "Your primary vehicle" },
   {
     kind: "select",
     id: "primaryFuel",
     label: "Primary Vehicle Fuel Type",
     required: true,
     options: { dependsOn: "primaryVehicle", map: FUEL_BY_VEHICLE },
+    showIf: notPrimary,
+    group: "Your primary vehicle",
   },
-  { kind: "text", id: "primaryNumber", label: "Vehicle Number", required: true, maxLength: 20, placeholder: "e.g. KA01AB1234" },
-  { kind: "text", id: "primaryMake", label: "Manufacturer", required: true, maxLength: 60, placeholder: "e.g. Maruti Suzuki" },
-  { kind: "text", id: "primaryModel", label: "Model", required: true, maxLength: 60, placeholder: "e.g. Swift" },
+  { kind: "text", id: "primaryNumber", label: "Primary Vehicle Number", required: true, maxLength: 20, placeholder: "e.g. KA01AB1234", showIf: notPrimary, group: "Your primary vehicle" },
+  { kind: "text", id: "primaryMake", label: "Primary Vehicle Manufacturer", required: true, maxLength: 60, showIf: notPrimary, group: "Your primary vehicle" },
+  { kind: "text", id: "primaryModel", label: "Primary Vehicle Model", required: true, maxLength: 60, showIf: notPrimary, group: "Your primary vehicle" },
+
+  // "Yes" — this is the primary vehicle; there may also be a secondary one.
   {
     kind: "radio",
     id: "useSecondary",
     label: "Do you use a Secondary Vehicle for field work?",
     required: true,
     options: ["Yes", "No"],
+    showIf: isPrimary,
+    group: "Secondary vehicle",
   },
-  { kind: "select", id: "secondaryVehicle", label: "Secondary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"], showIf: ifSecondary },
+  { kind: "select", id: "secondaryVehicle", label: "Secondary Vehicle", required: true, options: ["4 Wheeler", "2 Wheeler"], showIf: [isPrimary, hasSecondary], group: "Secondary vehicle" },
   {
     kind: "select",
     id: "secondaryFuel",
     label: "Secondary Vehicle Fuel Type",
     required: true,
     options: { dependsOn: "secondaryVehicle", map: FUEL_BY_VEHICLE },
-    showIf: ifSecondary,
+    showIf: [isPrimary, hasSecondary],
+    group: "Secondary vehicle",
   },
-  { kind: "text", id: "secondaryNumber", label: "Secondary Vehicle Number", required: true, maxLength: 20, showIf: ifSecondary },
-  { kind: "text", id: "secondaryMake", label: "Secondary Manufacturer", required: true, maxLength: 60, showIf: ifSecondary },
-  { kind: "text", id: "secondaryModel", label: "Secondary Model", required: true, maxLength: 60, showIf: ifSecondary },
+  { kind: "text", id: "secondaryNumber", label: "Secondary Vehicle Number", required: true, maxLength: 20, showIf: [isPrimary, hasSecondary], group: "Secondary vehicle" },
+  { kind: "text", id: "secondaryMake", label: "Secondary Manufacturer", required: true, maxLength: 60, showIf: [isPrimary, hasSecondary], group: "Secondary vehicle" },
+  { kind: "text", id: "secondaryModel", label: "Secondary Model", required: true, maxLength: 60, showIf: [isPrimary, hasSecondary], group: "Secondary vehicle" },
 ];

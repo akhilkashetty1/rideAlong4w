@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, CircleAlert, CloudUpload, Download, Hand, Loader2, Printer, RotateCcw, Send } from "lucide-react";
 import thankYou from "@/public/images/thank-you.jpg";
@@ -361,10 +361,18 @@ export default function AssessmentWizard() {
             <>
               <h2 className="mb-3 text-lg font-bold">Vehicle Details</h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {VEHICLE_FIELDS.filter((f) => isVisible(f, state.fields)).map((f) => (
-                  <div key={f.id} className={cn(f.kind === "radio" && "sm:col-span-2")}>
-                    <FieldInput field={f} fields={state.fields} error={errors[f.id]} onChange={setField} />
-                  </div>
+                {VEHICLE_FIELDS.filter((f) => isVisible(f, state.fields)).map((f, i, shown) => (
+                  <Fragment key={f.id}>
+                    {/* a heading each time a new group of fields starts (this vehicle / primary / secondary) */}
+                    {f.group && f.group !== shown[i - 1]?.group && (
+                      <h3 className="mt-2 border-t border-line pt-4 text-xs font-bold uppercase tracking-wider text-ink-soft sm:col-span-2">
+                        {f.group}
+                      </h3>
+                    )}
+                    <div className={cn(f.kind === "radio" && "sm:col-span-2")}>
+                      <FieldInput field={f} fields={state.fields} error={errors[f.id]} onChange={setField} />
+                    </div>
+                  </Fragment>
                 ))}
               </div>
               <label

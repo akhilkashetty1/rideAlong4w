@@ -26,10 +26,13 @@ export type Answer = {
  * version (it has no `formVersion`, or a lower one) is checked by the rules it was filled in
  * under, so it still goes through when it's finally sent.
  */
-export const FORM_VERSION = 3;
+export const FORM_VERSION = 4;
 
 /** Fields that became required in version 2. */
 const NEW_IN_V2 = new Set(["primaryMake", "primaryModel", "secondaryNumber", "secondaryMake", "secondaryModel"]);
+
+/** Fields added in version 4 ("is this four-wheeler your primary vehicle?" and this vehicle's own details). */
+const NEW_IN_V4 = new Set(["isPrimary", "vehicleFuel", "vehicleNumber", "vehicleMake", "vehicleModel"]);
 
 /** Questions added in version 3 (the driving position). An assessment saved by an older version won't have an answer. */
 const NEW_QUESTIONS_V3 = new Set(["driver.seating-posture"]);
@@ -105,7 +108,8 @@ export function fieldOptions(field: FieldDef, fields: Record<string, string>): s
 }
 
 export function isVisible(field: FieldDef, fields: Record<string, string>) {
-  return !field.showIf || fields[field.showIf.field] === field.showIf.equals;
+  if (!field.showIf) return true;
+  return [field.showIf].flat().every((c) => fields[c.field] === c.equals);
 }
 
 /** Sets a field and resets any select whose options depend on it and no longer include its value. */
@@ -144,7 +148,7 @@ function validateFields(defs: FieldDef[], fields: Record<string, string>, errors
   for (const f of defs) {
     if (!isVisible(f, fields)) continue;
     const v = (fields[f.id] ?? "").trim();
-    const required = f.required && !(rules.legacy && NEW_IN_V2.has(f.id));
+    const required = f.required && !(rules.legacy && (NEW_IN_V2.has(f.id) || NEW_IN_V4.has(f.id)));
     if (required && !v) errors[f.id] = f.kind === "select" ? "Please choose one" : "This field is required";
     else if (v && f.kind !== "text" && !fieldOptions(f, fields).includes(v)) errors[f.id] = "Choose one of the options";
   }
@@ -250,6 +254,69 @@ function fieldRows(defs: FieldDef[], fields: Record<string, string>): ReportRow[
     .map((f) => ({ column: f.label, label: f.label, value: fields[f.id] || "Not provided" }));
 }
 
+/* ------------------------------------------------------------- vehicles */
+
+type VehicleInfo = { type: string; fuel: string; number: string; make: string; model: string };
+
+/**
+ * Which vehicle is "primary" and which is "secondary" — however the person answered.
+ *
+ *  - "Is this four-wheeler your primary vehicle?" Yes → this four-wheeler is the primary; the optional
+ *    secondary vehicle comes from the secondary questions.
+ *  - No → this four-wheeler is the secondary vehicle (no need to ask), and the primary vehicle comes from
+ *    the "Your primary vehicle" questions.
+ *  - Answered before that question existed (an assessment saved offline by an older version): the old
+ *    primary / secondary fields are used as they were.
+ */
+export function resolveVehicles(f: Record<string, string>): {
+  thisIsPrimary: "Yes" | "No" | "";
+  primary: VehicleInfo;
+  secondary: VehicleInfo | null;
+} {
+  const thisVehicle: VehicleInfo = { type: "4 Wheeler", fuel: f.vehicleFuel, number: f.vehicleNumber, make: f.vehicleMake, model: f.vehicleModel };
+  const named = (p: "primary" | "secondary"): VehicleInfo => ({
+    type: f[`${p}Vehicle`],
+    fuel: f[`${p}Fuel`],
+    number: f[`${p}Number`],
+    make: f[`${p}Make`],
+    model: f[`${p}Model`],
+  });
+  const secondary = f.useSecondary === "Yes" ? named("secondary") : null;
+  if (f.isPrimary === "Yes") return { thisIsPrimary: "Yes", primary: thisVehicle, secondary };
+  if (f.isPrimary === "No") return { thisIsPrimary: "No", primary: named("primary"), secondary: thisVehicle };
+  return { thisIsPrimary: "", primary: named("primary"), secondary };
+}
+
+/**
+ * The Vehicle Details rows. Column names for the primary and secondary vehicle are the ones the Sheet and the
+ * submissions hub have always used, so existing rows and filters keep working; one new column records which
+ * of the two vehicles was assessed.
+ */
+function vehicleRows(f: Record<string, string>): ReportRow[] {
+  const { thisIsPrimary, primary, secondary } = resolveVehicles(f);
+  const row = (column: string, value: string, label = column): ReportRow => ({ column, label, value: value || "Not provided" });
+  const rows: ReportRow[] = [];
+  if (thisIsPrimary) rows.push(row("Is this four-wheeler your primary vehicle?", thisIsPrimary));
+  rows.push(
+    row("Primary Vehicle", primary.type),
+    row("Primary Vehicle Fuel Type", primary.fuel),
+    row("Vehicle Number", primary.number, "Primary Vehicle Number"),
+    row("Manufacturer", primary.make, "Primary Vehicle Manufacturer"),
+    row("Model", primary.model, "Primary Vehicle Model"),
+    row("Do you use a Secondary Vehicle for field work?", secondary ? "Yes" : "No"),
+  );
+  if (secondary) {
+    rows.push(
+      row("Secondary Vehicle", secondary.type),
+      row("Secondary Vehicle Fuel Type", secondary.fuel),
+      row("Secondary Vehicle Number", secondary.number),
+      row("Secondary Manufacturer", secondary.make),
+      row("Secondary Model", secondary.model),
+    );
+  }
+  return rows;
+}
+
 export function buildReport(state: FormState, submittedAt = new Date()): ReportSection[] {
   return [
     {
@@ -290,7 +357,7 @@ export function buildReport(state: FormState, submittedAt = new Date()): ReportS
       title: "Vehicle Details",
       kind: "fields",
       rows: [
-        ...fieldRows(VEHICLE_FIELDS, state.fields),
+        ...vehicleRows(state.fields),
         { column: "Line Manager Confirmed", label: "Line manager confirmation", value: state.confirmed ? "Yes" : "No" },
       ],
     },
